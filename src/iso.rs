@@ -1,5 +1,4 @@
-use std::fs::File;
-use std::io::{self, Read, Seek, SeekFrom};
+use crate::io;
 
 pub const BLOCK_SIZE: usize = 2048; // Size of a sector 
 const INITIAL_ENTRY_OFFSET: usize = 32;
@@ -91,3 +90,26 @@ pub fn get_boot_img_start_block_and_sector_count(boot_catalog: &[u8]) -> Option<
     Some((boot_image_start_block, sector_count))
 
 }   
+
+pub fn copy_boot_image(data: &[u8], start_block: u32, sector_count: u16, destination: &mut [u8]) -> io::Result<()> 
+{
+    let start_offset = (start_block as usize) * BLOCK_SIZE;
+    let end_offset = start_offset + (sector_count as usize) * BLOCK_SIZE;
+
+    // Check if the destination buffer is large enough
+    if destination.len() < (sector_count as usize) * BLOCK_SIZE 
+    {
+        return Err(io::Error::new(io::ErrorKind::InvalidInput, "Destination buffer is too small"));
+    }
+
+    // Check if the data slice has enough data
+    if end_offset > data.len() 
+    {
+        return Err(io::Error::new(io::ErrorKind::InvalidInput, "Not enough data in source buffer"));
+    }
+
+    // Copy the data from the source to the destination buffer
+    destination.copy_from_slice(&data[start_offset..end_offset]);
+
+    Ok(())
+}

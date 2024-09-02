@@ -1,6 +1,6 @@
 use std::fs::File;
-use std::io::{self, Read};
-use iso::{BLOCK_SIZE, get_boot_catalog_location, get_boot_img_start_block_and_sector_count};
+use std::io::{self, Read, Write};
+use iso::{BLOCK_SIZE, get_boot_catalog_location, get_boot_img_start_block_and_sector_count, copy_boot_image};
 
 mod iso;
 
@@ -16,7 +16,7 @@ fn main() -> io::Result<()>
         None => 
         {
             println!("Boot catalog location could not be determined.");
-            return Ok(()); // or Err(e) if you prefer to handle errors
+            return Ok(());
         }
     };
 
@@ -28,18 +28,27 @@ fn main() -> io::Result<()>
     }
 
     let boot_catalog = &data[boot_catalog_start..boot_catalog_start + BLOCK_SIZE];
-    match get_boot_img_start_block_and_sector_count(boot_catalog) 
+    let (boot_image_start_block, boot_image_sector_count) = match get_boot_img_start_block_and_sector_count(boot_catalog) 
     {
         Some((start_block, sector_count)) => 
         {
             println!("Boot Image Start Block: {}", start_block);
             println!("Sector Count: {}", sector_count);
+            (start_block, sector_count)
         },
         None => 
         {
             println!("Failed to parse El Torito Boot Catalog.");
+            (0, 0)
         }
-    }
+    };
+
+    let mut boot_image = vec![0; (boot_image_sector_count as usize) * BLOCK_SIZE];
+    copy_boot_image(&data, boot_image_start_block, boot_image_sector_count, &mut boot_image)?;
+
+    let mut save_file = File::create("bootimg")?;
+    save_file.write_all(&boot_image)?;
+    println!("Boot image saved to {}", "bootimg");
 
     Ok(())
 }
