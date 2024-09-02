@@ -28,7 +28,7 @@ pub fn get_boot_catalog_location(data: &[u8]) -> Option<u32>
         if descriptor_type == 0 
         {
             println!("Boot Record Volume Descriptor found at offset {}", offset);
-            let identifier = &descriptor[1..6];
+            let identifier = &descriptor[1..6]; 
             if identifier != b"CD001" {
                 println!("Invalid Boot Record Volume Descriptor.");
                 return None;
@@ -55,13 +55,39 @@ pub fn get_boot_catalog_location(data: &[u8]) -> Option<u32>
 
 
 
-fn parse_el_torito_boot_catalog(boot_catalog: &[u8])
+pub fn get_boot_img_start_block_and_sector_count(boot_catalog: &[u8]) -> Option<(u32, u16)>
 {
+
+    // Check Validation entry header
+    if boot_catalog[0] != 0x01
+    {
+        println!("Validation entry Header ID is not 0x01.");
+        return None;
+    }
+
+    // Check Validation entry reserved word
+    if boot_catalog[2] != 0x00 && boot_catalog[3] != 0x00
+    {
+        println!("Validation entry reserved word is not all 0.");
+        return None;
+    }
+
     // Initial/Default Entry: The second entry in the Boot Catalog
     let boot_entry = &boot_catalog[INITIAL_ENTRY_OFFSET..INITIAL_ENTRY_OFFSET + 32];
+
+    // Validate Boot Indicator
+    if boot_entry[0] != 0x88 
+    {
+        println!("Boot Indicator is not 0x88 for Bootable.");
+        return None;
+    }
 
     // Start address of the virtual disk. Uses relative block addressing (RBA)
     let boot_image_start_block = u32::from_le_bytes([boot_entry[8], boot_entry[9], boot_entry[10], boot_entry[11]]);
 
     // Sector count: number of sectors stored at Load Segment during initial boot procedure
-}
+    let sector_count = u16::from_le_bytes([boot_entry[6], boot_entry[7]]);
+
+    Some((boot_image_start_block, sector_count))
+
+}   
