@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io::{self, Read, Write};
 use iso::{BLOCK_SIZE, get_boot_catalog_location, get_boot_img_start_block_and_sector_count, copy_boot_image};
 
+mod v_cpu;
 mod iso;
 
 fn main() -> io::Result<()> 
@@ -15,7 +16,7 @@ fn main() -> io::Result<()>
         Some(location) => location,
         None => 
         {
-            println!("Boot catalog location could not be determined.");
+            println!("Boot catalog location could not be determined.") ;
             return Ok(());
         }
     };
